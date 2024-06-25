@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 점술가 웹페이지</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #2C2C2C;
+            color: #FFF;
+            overflow: hidden;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #1F1F1F;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            color: #FFF;
+        }
+        .slide-container {
+            display: flex;
+            transition: transform 0.3s ease-in-out;
+        }
+        .slide {
+            min-width: 100%;
+            box-sizing: border-box;
+        }
+        .pagination {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .pagination button {
+            background-color: #FF4081;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 0 5px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+        h1 {
+            font-size: 26px;
+            font-weight: 700;
+            color: #FF4081;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #FF4081;
+        }
+        input, button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        input {
+            background-color: #333;
+            color: #FFF;
+        }
+        button {
+            background-color: #FF4081;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+            transition: background-color 0.3s ease;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #E91E63;
+        }
+        .response, .chat-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #333;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            white-space: pre-wrap;
+        }
+        .chat-container {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .chat-message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .user-message {
+            background-color: #4CAF50;
+            color: white;
+            text-align: right;
+        }
+        .bot-message {
+            background-color: #FFEBEE;
+            color: black;
+        }
+        h2, h3, h4 {
+            color: #FF4081;
+            margin-bottom: 10px;
+        }
+        p {
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        strong {
+            font-weight: bold;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 20px 10px;
+                padding: 15px;
+            }
+            input, button {
+                padding: 10px;
+                font-size: 14px;
+            }
+            h1 {
+                font-size: 22px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            input, button {
+                padding: 8px;
+                font-size: 12px;
+            }
+            h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="slide-container" id="slide-container">
+            <div class="slide">
+                <h1>점술가 웹페이지</h1>
+                <label for="name">이름을 입력하세요</label>
+                <input type="text" id="name" placeholder="이름을 입력하세요">
+                <label for="birthdate">생년월일을 입력하세요</label>
+                <input type="date" id="birthdate">
+                <label for="birthtime">태어난 시간을 입력하세요</label>
+                <input type="time" id="birthtime">
+                <button onclick="getFortune()">사주 보기</button>
+                <div class="response" id="response"></div>
+            </div>
+        </div>
+        <div class="pagination" id="pagination"></div>
+    </div>
+
+<!-- index.html 수정 -->
+    <script>
+        let conversation = [{"role": "system", "content": "당신은 점술가입니다. 제공된 이름, 생년월일, 태어난 시간에 기반하여 상세한 사주풀이를 제공하세요."}];
+
+        async function getFortune() {
+            const name = document.getElementById('name').value;
+            const birthdate = document.getElementById('birthdate').value;
+            const birthtime = document.getElementById('birthtime').value;
+            const responseDiv = document.getElementById('response');
+            responseDiv.innerHTML = '불러오는 중...';
+
+            const response = await fetch('http://localhost:3000/api/get-fortune', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name, birthdate, birthtime, userMessage: '' })
+            });
+
+            const data = await response.json();
+            const message = formatResponse(data.choices[0].message.content);
+            conversation.push({"role": "assistant", "content": message});
+            responseDiv.innerHTML = message;
+
+            document.getElementById('chat-container').style.display = 'block';
+        }
+
+        async function sendChatMessage() {
+            const chatInput = document.getElementById('chat-input').value;
+            const chatContainer = document.getElementById('chat-container');
+
+            const userMessage = chatInput;
+            conversation.push({"role": "user", "content": userMessage});
+
+            const response = await fetch('http://localhost:3000/api/get-fortune', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name, birthdate, birthtime, userMessage })
+            });
+
+            const data = await response.json();
+            const message = formatResponse(data.choices[0].message.content);
+            conversation.push({"role": "assistant", "content": message});
+            updateChatContainer(userMessage, message);
+        }
+
+        function formatResponse(response) {
+            response = response.replace(/### (.*?)\n/g, '<h2>$1</h2>');
+            response = response.replace(/#### (.*?)\n/g, '<h3>$1</h3>');
+            response = response.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            return response.replace(/(?:\r\n|\r|\n)/g, '<br>');
+        }
+
+        function updateChatContainer(userMessage, botMessage) {
+            const chatContainer = document.getElementById('chat-container');
+            chatContainer.innerHTML += `<div class="chat-message user-message">${userMessage}</div>`;
+            chatContainer.innerHTML += `<div class="chat-message bot-message">${botMessage}</div>`;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
+
+</body>
+</html>
